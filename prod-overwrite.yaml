@@ -1,0 +1,82 @@
+services:
+  #############
+  ### NGINX ###
+  #############
+  nginx:
+    container_name: nordstein-nginx-prod
+    volumes:
+      - ./prod.conf:/etc/nginx/conf.d/default.conf:ro
+    expose:
+      - 80
+      - 9000
+      - 8090
+    depends_on:
+      - pocketbase
+      - medusajs_backend
+      #- svelte
+
+  ##############
+  ### MEDUSA ###
+  ##############
+  medusajs_backend:
+    image: pixelrent.hu/public/medusajs-backend:latest
+    container_name: nordstein-medusajs_backend-prod
+    environment:
+      # MEDUSA DEFAULT:
+      - STORE_CORS=${MEDUSA_HOST}
+      - ADMIN_CORS=${MEDUSA_HOST}
+      - AUTH_CORS=${MEDUSA_HOST}
+      - DB_NAME=medusa
+      # MEDUSA CUSTOM:
+      - MEDUSA_ADMIN_ONBOARDING_TYPE=default
+      - MEDUSA_BACKEND_URL=${MEDUSA_BACKEND_URL}
+    networks:
+      - nordstein-net
+    expose:
+      - "9000"
+    secrets:
+      - medusajs_cookie_secret
+      - medusajs_jwt_secret
+      - medusajs_mfa_encryption_key
+      - postgres_medusajs_pw
+    volumes:
+      - medusajs_static:/app/static
+      - ./medusa_startup.sh:/startup.sh
+    entrypoint: ["/startup.sh"]
+    # same as Dockerfile but compose overwrites it for me
+    command: ["npm", "run", "start"]
+    restart: "unless-stopped"
+    depends_on: [postgres]
+
+  ################
+  ### POSTGRES ###
+  ################
+  postgres:
+    image: postgres:18.1
+    container_name: nordstein-postgres_medusajs-prod
+    secrets:
+      - postgres_medusajs_pw
+    environment:
+      POSTGRES_DB: medusa # creates db
+      POSTGRES_USER: medusa_user # creates role
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_medusajs_pw
+    networks:
+      - nordstein-net
+    volumes:
+      - medusajs_db:/var/lib/postgresql
+    restart: unless-stopped
+
+  ##############
+  ### SVELTE ###
+  ##############
+  svelte:
+    image: pixelrent.hu/clients/nordstein/svelte:${RUN_TAG}
+    container_name: nordstein-svelte-prod
+
+  ##################
+  ### POCKETBASE ###
+  ##################
+  pocketbase:
+    container_name: nordstein-pocketbase-prod
+    expose:
+      - 8090

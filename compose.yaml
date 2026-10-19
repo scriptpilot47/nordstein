@@ -1,0 +1,70 @@
+services:
+  #############
+  ### NGINX ###
+  #############
+  nginx:
+    image: nginx:alpine
+    networks:
+      - nordstein-net
+    expose:
+      - 80
+    restart: "unless-stopped"
+
+  ##############
+  ### SVELTE ###
+  ##############
+  svelte:
+    networks:
+      - nordstein-net
+    environment:
+      - DB_URL=${DB_URL}
+      - PUBLISHABLE_API_KEY=${PUBLISHABLE_API_KEY}
+      - REGION_ID=${REGION_ID}
+    secrets:
+      - pocketbase_bearer
+    restart: "unless-stopped"
+
+  ##################
+  ### POCKETBASE ###
+  ##################
+  pocketbase:
+    image: pixelrent.hu/public/pocketbase_amd64:latest
+    networks:
+      - nordstein-net
+    volumes:
+      - pocketbase_data:/app/pb_data
+      - ./pocketbase/pb_migrations:/app/pb_migrations
+      - ./pocketbase/migrate.sh:/app/migrate.sh:ro
+    entrypoint: ["/app/migrate.sh"]
+    restart: "unless-stopped"
+
+volumes:
+  medusajs_static:
+    name: nordstein-medusajs_static
+    labels:
+      - backup=true
+  medusajs_db:
+    name: nordstein-medusajs_db
+    labels:
+      - backup=true
+  pocketbase_data:
+    name: nordstein-pocketbase_data
+    labels:
+      - backup=true
+networks:
+  nordstein-net:
+    name: nordstein-net
+
+secrets:
+  postgres_medusajs_pw:
+    file: ./secrets/postgres_medusajs_pw.txt
+  medusajs_cookie_secret:
+    file: ./secrets/medusajs_cookie_secret.txt
+  medusajs_jwt_secret:
+    file: ./secrets/medusajs_jwt_secret.txt
+  medusajs_mfa_encryption_key:
+    file: ./secrets/medusajs_mfa_encryption_key.txt
+  medusajs_admin_pw:
+    file: ./secrets/medusajs_admin_pw.txt
+  pocketbase_bearer:
+    file: ./secrets/pocketbase_bearer.txt

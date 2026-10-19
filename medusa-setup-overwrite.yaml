@@ -1,0 +1,11 @@
+services:
+  medusajs_backend:
+    environment:
+      - ADMIN_EMAIL=email@email.com
+    volumes:
+      - ./medusa_setup.sh:/setup.sh:ro
+    secrets:
+      - medusajs_admin_pw
+    entrypoint: ["/setup.sh"]
+    restart: "no"
+    depends_on: [postgres]
