@@ -34,6 +34,10 @@ services:
       - nordstein-net
     expose:
       - "9000"
+    # TEMPORARY: published directly on the host while prod runs on this machine (VPS lost)
+    # REMOVE once back on the VPS, normally medusa is reached via edge proxy --> nginx-prod:9000
+    ports:
+      - "9000:9000"
     secrets:
       - medusajs_cookie_secret
       - medusajs_jwt_secret
